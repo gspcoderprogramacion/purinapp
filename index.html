@@ -12,11 +12,11 @@
   <h2>Agendar Cita</h2>
 
   <div class="form-group">
-    <input type="text" id="nombre" placeholder="Nombre">
+    <input type="text" id="nombre" placeholder="Nombre Propietario">
   </div>
 
   <div class="form-group">
-    <input type="text" id="telefono" placeholder="Teléfono">
+    <input type="text" id="telefono" placeholder="Número Telefónico">
   </div>
 
   <div class="form-group">
@@ -24,15 +24,22 @@
   </div>
 
   <div class="form-group">
-    <input type="text" id="especie" placeholder="Especie">
+    <select id="especie" required>
+        <option value="No seleccionó">¿Que especie es su mascota?</option>
+        <option value="Perro">Perro</option>
+        <option value="Gato">Gato</option>
+        <option value="Ave">Ave</option>
+        <option value="Conejo">Conejo</option>
+        <option value="Otro">Otro</option>
+    </select>
   </div>
 
   <div class="form-group">
-    <input type="text" id="mascota" placeholder="Mascota">
+    <input type="text" id="mascota" placeholder="Nombre de la Mascota">
   </div>
 
   <div class="form-group">
-    <input type="text" id="motivo" placeholder="Motivo">
+    <input type="text" id="motivo" placeholder="Motivo de la Cita">
   </div>
 
   <div class="form-group">
