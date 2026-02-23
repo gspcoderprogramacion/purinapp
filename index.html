@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Veterinaria a Domicilio</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<div class="container">
+
+  <h2>Agendar Cita</h2>
+
+  <div class="form-group">
+    <input type="text" id="nombre" placeholder="Nombre">
+  </div>
+
+  <div class="form-group">
+    <input type="text" id="telefono" placeholder="Teléfono">
+  </div>
+
+  <div class="form-group">
+    <input type="text" id="direccion" placeholder="Dirección">
+  </div>
+
+  <div class="form-group">
+    <input type="text" id="especie" placeholder="Especie">
+  </div>
+
+  <div class="form-group">
+    <input type="text" id="mascota" placeholder="Mascota">
+  </div>
+
+  <div class="form-group">
+    <input type="text" id="motivo" placeholder="Motivo">
+  </div>
+
+  <div class="form-group">
+    <input type="date" id="fecha">
+  </div>
+
+  <div class="form-group">
+    <select id="hora"></select>
+  </div>
+
+  <button onclick="guardarCita()" class="btn-agendar">
+    Agendar
+  </button>
+
+</div>
+
+<script type="module" src="js/agendar.js"></script>
+
+</body>
+</html>
