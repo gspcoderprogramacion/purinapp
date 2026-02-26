@@ -1,9 +1,39 @@
-import { db } from "./firebaseConfig.js";
-import { collection, getDocs, query, where, addDoc } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { db, auth } from "./firebaseConfig.js";
+
+import { 
+  collection, 
+  getDocs, 
+  query, 
+  where, 
+  addDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import { 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 
-// 🔹 Cargar horarios disponibles
+/* ===============================
+   🔐 CONTROL DE SESIÓN
+================================= */
+
+let usuarioActual = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    usuarioActual = user;
+    console.log("Usuario logueado:", user.uid);
+  } else {
+    // Si no hay sesión, redirige al login
+    window.location.href = "login.html";
+  }
+});
+
+
+/* ===============================
+   📅 CARGAR HORARIOS DISPONIBLES
+================================= */
+
 async function cargarHorariosDisponibles() {
 
   const fechaSeleccionada = document.getElementById("fecha").value;
@@ -13,7 +43,7 @@ async function cargarHorariosDisponibles() {
 
   if (!fechaSeleccionada) return;
 
-  // 🔥 SOLUCIÓN DEFINITIVA ZONA HORARIA
+  // 🔥 Manejo correcto de zona horaria
   const partes = fechaSeleccionada.split("-");
   const fechaObj = new Date(
     partes[0],
@@ -25,8 +55,13 @@ async function cargarHorariosDisponibles() {
   // 0 = Domingo
   // 6 = Sábado
 
-  // ❌ DOMINGO → no mostrar nada
+  // ❌ Domingo → no atención
   if (diaSemana === 0) {
+    const option = document.createElement("option");
+    option.textContent = "No atendemos domingos";
+    option.disabled = true;
+    option.selected = true;
+    selectHora.appendChild(option);
     return;
   }
 
@@ -48,14 +83,14 @@ async function cargarHorariosDisponibles() {
   let horaFin;
 
   if (diaSemana === 6) {
-    // 🟡 SÁBADO
+    // 🟡 Sábado
     horaFin = 12;
   } else {
-    // 🟢 LUNES A VIERNES
+    // 🟢 Lunes a Viernes
     horaFin = 18;
   }
 
-  // ⏰ Intervalos cada 1 hora (incluye la última hora)
+  // ⏰ Intervalos cada 1 hora
   for (let hora = horaInicio; hora <= horaFin; hora++) {
 
     let horaFormateada = String(hora).padStart(2, "0") + ":00";
@@ -68,7 +103,7 @@ async function cargarHorariosDisponibles() {
     }
   }
 
-  // Si no quedan horarios disponibles
+  // Si no quedan horarios
   if (selectHora.innerHTML === "") {
     const option = document.createElement("option");
     option.textContent = "No hay horarios disponibles";
@@ -79,8 +114,16 @@ async function cargarHorariosDisponibles() {
 }
 
 
-// 🔹 Guardar cita
+/* ===============================
+   💾 GUARDAR CITA
+================================= */
+
 window.guardarCita = async function() {
+
+  if (!usuarioActual) {
+    alert("Debe iniciar sesión");
+    return;
+  }
 
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
@@ -96,35 +139,47 @@ window.guardarCita = async function() {
     return;
   }
 
-  const cita = {
-    nombre,
-    telefono,
-    direccion,
-    especie,
-    mascota,
-    motivo,
-    fecha,
-    hora,
-    estado: "pendiente"
-  };
+  try {
 
-  await addDoc(collection(db, "citas"), cita);
+    const cita = {
+      userId: usuarioActual.uid,  // 🔥 ID del usuario
+      nombre,
+      telefono,
+      direccion,
+      especie,
+      mascota,
+      motivo,
+      fecha,
+      hora,
+      estado: "pendiente",
+      createdAt: new Date()
+    };
 
-  alert("Cita agendada correctamente ✅");
+    await addDoc(collection(db, "citas"), cita);
 
-  // 🔥 Limpiar formulario
-  document.getElementById("nombre").value = "";
-  document.getElementById("telefono").value = "";
-  document.getElementById("direccion").value = "";
-  document.getElementById("especie").value = "";
-  document.getElementById("mascota").value = "";
-  document.getElementById("motivo").value = "";
-  document.getElementById("fecha").value = "";
-  document.getElementById("hora").innerHTML = "";
+    alert("Cita agendada correctamente ✅");
+
+    // 🔥 Limpiar formulario
+    document.getElementById("nombre").value = "";
+    document.getElementById("telefono").value = "";
+    document.getElementById("direccion").value = "";
+    document.getElementById("especie").value = "";
+    document.getElementById("mascota").value = "";
+    document.getElementById("motivo").value = "";
+    document.getElementById("fecha").value = "";
+    document.getElementById("hora").innerHTML = "";
+
+  } catch (error) {
+    console.error("Error al guardar:", error);
+    alert("Error al guardar la cita");
+  }
 };
 
 
-// 🔹 Activar evento cuando cambie la fecha
+/* ===============================
+   🎯 EVENTO FECHA
+================================= */
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const inputFecha = document.getElementById("fecha");
