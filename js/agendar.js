@@ -14,20 +14,47 @@ import {
 
 
 /* ===============================
-   🔐 CONTROL DE SESIÓN
+   🐾 CARGAR MASCOTAS DEL USUARIO
 ================================= */
 
-let usuarioActual = null;
+async function cargarMascotas(uid) {
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    usuarioActual = user;
-    console.log("Usuario logueado:", user.uid);
-  } else {
-    // Si no hay sesión, redirige al login
-    window.location.href = "login.html";
+  const mascotaSelect = document.getElementById("mascotaSelect");
+  mascotaSelect.innerHTML = "<option value=''>Seleccione su mascota</option>";
+
+  try {
+
+    const q = query(
+      collection(db, "Mascotas"),
+      where("propietario_id", "==", uid)
+    );
+
+    const snapshot = await getDocs(q);
+
+    console.log("Mascotas encontradas:", snapshot.size);
+
+    if (snapshot.empty) {
+      const option = document.createElement("option");
+      option.textContent = "No tienes mascotas registradas";
+      option.disabled = true;
+      mascotaSelect.appendChild(option);
+      return;
+    }
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+
+      const option = document.createElement("option");
+      option.value = doc.id;
+      option.textContent = `${data.nombre} (${data.especie})`;
+
+      mascotaSelect.appendChild(option);
+    });
+
+  } catch (error) {
+    console.error("Error cargando mascotas:", error);
   }
-});
+}
 
 
 /* ===============================
@@ -43,7 +70,6 @@ async function cargarHorariosDisponibles() {
 
   if (!fechaSeleccionada) return;
 
-  // 🔥 Manejo correcto de zona horaria
   const partes = fechaSeleccionada.split("-");
   const fechaObj = new Date(
     partes[0],
@@ -52,10 +78,8 @@ async function cargarHorariosDisponibles() {
   );
 
   const diaSemana = fechaObj.getDay();
-  // 0 = Domingo
-  // 6 = Sábado
 
-  // ❌ Domingo → no atención
+  // ❌ Domingo
   if (diaSemana === 0) {
     const option = document.createElement("option");
     option.textContent = "No atendemos domingos";
@@ -65,7 +89,6 @@ async function cargarHorariosDisponibles() {
     return;
   }
 
-  // 🔎 Consultar citas ya ocupadas ese día
   const q = query(
     collection(db, "citas"),
     where("fecha", "==", fechaSeleccionada)
@@ -78,19 +101,9 @@ async function cargarHorariosDisponibles() {
     horasOcupadas.push(doc.data().hora);
   });
 
-  // 🔥 Definir horario según el día
   let horaInicio = 9;
-  let horaFin;
+  let horaFin = (diaSemana === 6) ? 12 : 18; // sábado hasta 12
 
-  if (diaSemana === 6) {
-    // 🟡 Sábado
-    horaFin = 12;
-  } else {
-    // 🟢 Lunes a Viernes
-    horaFin = 18;
-  }
-
-  // ⏰ Intervalos cada 1 hora
   for (let hora = horaInicio; hora <= horaFin; hora++) {
 
     let horaFormateada = String(hora).padStart(2, "0") + ":00";
@@ -103,7 +116,6 @@ async function cargarHorariosDisponibles() {
     }
   }
 
-  // Si no quedan horarios
   if (selectHora.innerHTML === "") {
     const option = document.createElement("option");
     option.textContent = "No hay horarios disponibles";
@@ -120,34 +132,28 @@ async function cargarHorariosDisponibles() {
 
 window.guardarCita = async function() {
 
-  if (!usuarioActual) {
-    alert("Debe iniciar sesión");
+  const user = auth.currentUser;
+
+  if (!user) {
+    alert("Usuario no autenticado");
     return;
   }
 
-  const nombre = document.getElementById("nombre").value;
-  const telefono = document.getElementById("telefono").value;
-  const direccion = document.getElementById("direccion").value;
-  const especie = document.getElementById("especie").value;
-  const mascota = document.getElementById("mascota").value;
+  const mascotaId = document.getElementById("mascotaSelect").value;
   const motivo = document.getElementById("motivo").value;
   const fecha = document.getElementById("fecha").value;
   const hora = document.getElementById("hora").value;
 
-  if (!fecha || !hora) {
-    alert("Selecciona fecha y hora");
+  if (!mascotaId || !fecha || !hora) {
+    alert("Completa todos los campos");
     return;
   }
 
   try {
 
     const cita = {
-      userId: usuarioActual.uid,  // 🔥 ID del usuario
-      nombre,
-      telefono,
-      direccion,
-      especie,
-      mascota,
+      propietario_id: user.uid,
+      mascota_id: mascotaId,
       motivo,
       fecha,
       hora,
@@ -159,12 +165,7 @@ window.guardarCita = async function() {
 
     alert("Cita agendada correctamente ✅");
 
-    // 🔥 Limpiar formulario
-    document.getElementById("nombre").value = "";
-    document.getElementById("telefono").value = "";
-    document.getElementById("direccion").value = "";
-    document.getElementById("especie").value = "";
-    document.getElementById("mascota").value = "";
+    document.getElementById("mascotaSelect").value = "";
     document.getElementById("motivo").value = "";
     document.getElementById("fecha").value = "";
     document.getElementById("hora").innerHTML = "";
@@ -177,7 +178,7 @@ window.guardarCita = async function() {
 
 
 /* ===============================
-   🎯 EVENTO FECHA
+   🎯 EVENTOS
 ================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -187,5 +188,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (inputFecha) {
     inputFecha.addEventListener("change", cargarHorariosDisponibles);
   }
+
+  // 🔥 ESPERAR A QUE FIREBASE RESTAURE SESIÓN
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("Usuario autenticado:", user.uid);
+      cargarMascotas(user.uid);
+    } else {
+      console.log("No hay usuario autenticado");
+    }
+  });
 
 });
